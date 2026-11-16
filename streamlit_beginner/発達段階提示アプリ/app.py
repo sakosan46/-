@@ -139,15 +139,15 @@ def development_page():
     today = date(2026, 9, 23)
     one_week_ago = today - timedelta(days=7)
 
-        # Excelから観測データを読み込む
-　df = pd.read_excel(
-    Path(__file__).resolve().parent / "デモデータ.xlsx",
-    sheet_name="観測データ"
-)
+    # Excelから観測データを読み込む
+    df = pd.read_excel(
+        Path(__file__).resolve().parent / "デモデータ.xlsx",
+        sheet_name="観測データ"
+    )
 
     # Excelから子どもの基本情報を読み込む
     children_df = pd.read_excel(
-        "デモデータ.xlsx",
+        Path(__file__).resolve().parent / "デモデータ.xlsx",
         sheet_name="子ども基本情報"
     )
 
