@@ -385,7 +385,7 @@ def development_page():
             y0=-radius,
             x1=radius,
             y1=radius,
-            fillcolor="#F8F5F0",
+            fillcolor="#E2F0E6",
             line=dict(color="white", width=2),
             layer="below"
         )
