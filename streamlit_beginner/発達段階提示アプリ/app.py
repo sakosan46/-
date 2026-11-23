@@ -3,6 +3,7 @@ import streamlit as st
 from pathlib import Path
 import plotly.graph_objects as go
 import math
+import random
 from datetime import date, timedelta
 
 # -------------------------
@@ -417,11 +418,22 @@ def development_page():
             position = stage_positions.get(stage, 0)
             stage_positions[stage] = position + 1
 
-            radius = stage - 0.5
-            angle = position * 2.4
+            
+         # 発達段階の範囲内で点をばらけさせる
+        random.seed(stage * 1000 + position)
 
-            x = radius * math.cos(angle)
-            y = radius * math.sin(angle)
+        inner_radius = stage - 1
+        outer_radius = stage
+
+        radius = random.uniform(
+            inner_radius + 0.15,
+            outer_radius - 0.15
+        )
+
+        angle = random.uniform(0, 2 * math.pi)
+
+        x = radius * math.cos(angle)
+        y = radius * math.sin(angle)
 
             x_values.append(x)
             y_values.append(y)
@@ -486,8 +498,17 @@ def development_page():
 
             stage = record["stage"]
 
-            radius = stage - 0.5
-            angle = i * 2.4 + 0.8
+            random.seed(100000 + i)
+
+            inner_radius = stage - 1
+            outer_radius = stage
+
+            radius = random.uniform(
+                inner_radius + 0.15,
+                outer_radius - 0.15
+            )
+
+            angle = random.uniform(0, 2 * math.pi)
 
             x = radius * math.cos(angle)
             y = radius * math.sin(angle)
