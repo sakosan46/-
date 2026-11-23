@@ -544,6 +544,13 @@ def development_page():
 
       # グラフのデザイン
     fig.update_layout(
+            # 円の移動・タッチ操作を制限
+    fig.update_xaxes(
+        fixedrange=False
+    )
+    fig.update_yaxes(
+        fixedrange=False
+    )
         height=430,
         margin=dict(l=10, r=10, t=10, b=10),
         paper_bgcolor="rgba(0,0,0,0)",
@@ -562,7 +569,7 @@ def development_page():
         dragmode=False
     )
 
-      # 円の表示と点の選択
+    # 円の表示と点の選択
     event = st.plotly_chart(
         fig,
         use_container_width=True,
@@ -581,7 +588,9 @@ def development_page():
                 "autoScale2d"
             ],
             "doubleClick": False,
-            "staticPlot": False
+            "staticPlot": False,
+            "showAxisDragHandles": False,
+            "showAxisRangeEntryBoxes": False
         }
     )
     st.caption(
@@ -1613,3 +1622,4 @@ with col3:
     if st.button("⚙️ 設定"):
         move_page("設定")
         st.rerun()
+
