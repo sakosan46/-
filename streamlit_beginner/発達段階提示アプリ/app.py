@@ -500,25 +500,27 @@ def development_page():
     # ボタンをまとめる
     with st.container(key="zoom_controls"):
 
+        # stack_on_mobile=False でスマホでも横3列を維持
         col1, col2, col3 = st.columns(
-            [1, 1, 1],
-            gap="small"
+            3,
+            gap="small",
+            stack_on_mobile=False
         )
 
         with col1:
-            if st.button("＋ 拡大", key="zoom_in"):
+            if st.button("＋ 拡大", key="zoom_in", use_container_width=True):
                 st.session_state.circle_zoom = min(
                     st.session_state.circle_zoom * 1.25, 3.0
                 )
 
         with col2:
-            if st.button("－ 縮小", key="zoom_out"):
+            if st.button("－ 縮小", key="zoom_out", use_container_width=True):
                 st.session_state.circle_zoom = max(
                     st.session_state.circle_zoom / 1.25, 0.5
                 )
 
         with col3:
-            if st.button("元に戻す", key="zoom_reset"):
+            if st.button("元に戻す", key="zoom_reset", use_container_width=True):
                 st.session_state.circle_zoom = 1.0
 
     zoom = st.session_state.circle_zoom
