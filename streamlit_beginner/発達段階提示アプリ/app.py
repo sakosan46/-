@@ -542,7 +542,7 @@ def development_page():
             )
         )
 
-    # グラフのデザイン
+        # グラフのデザイン
     fig.update_layout(
         height=430,
         margin=dict(l=10, r=10, t=10, b=10),
@@ -559,18 +559,23 @@ def development_page():
             scaleanchor="x",
             scaleratio=1
         ),
-        dragmode=False
+        dragmode="zoom"
     )
 
-    # 円の表示と点の選択
+        # 円の表示と点の選択
     event = st.plotly_chart(
         fig,
         use_container_width=True,
         on_select="rerun",
         selection_mode="points",
-        key="development_chart"
+        key="development_chart",
+        config={
+            "scrollZoom": True,
+            "displayModeBar": False,
+            "doubleClick": "reset",
+            "staticPlot": False
+        }
     )
-
     st.caption(
         "円の層は発達段階を、点は遊びの記録を表しています。"
     )
@@ -1600,4 +1605,3 @@ with col3:
     if st.button("⚙️ 設定"):
         move_page("設定")
         st.rerun()
-
