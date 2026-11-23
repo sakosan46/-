@@ -9,7 +9,7 @@ st.title("遊びの発達状況（3D散布図）")
 
 EXCEL_PATH = Path(__file__).resolve().parent / "デモデータ.xlsx"
 TODAY = pd.Timestamp("2026-09-23")
-TARGET_ID = 1
+TARGET_ID = 16
 MIN_AGE = 42
 AGE_POINTS = [33, 36, 39, 42]
 STAGE_MAX = {"ボール": 5, "お絵描き": 4, "ぬいぐるみ": 3}
