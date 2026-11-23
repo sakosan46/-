@@ -138,6 +138,7 @@ def show_photo(filename, caption=""):
 # -------------------------
 def development_page():
     today = date(2026, 9, 23)
+    one_week_ago = today - timedelta(days=7)
 
     # Excelから観測データを読み込む
     df = pd.read_excel(
@@ -191,23 +192,6 @@ def development_page():
 
     st.subheader(f"{toy}の発達状況")
 
-        # 時系列で比較する時期を選択
-    if display_mode == "時系列":
-
-        months_ago = st.selectbox(
-            "比較する時期",
-            options=[3, 6, 9],
-            index=0,
-            format_func=lambda x: f"{x}か月前",
-            key="months_ago",
-            width=200
-        )
-
-        # 選択した月数だけさかのぼる
-        past_date = (
-            pd.Timestamp(today) - pd.DateOffset(months=months_ago)
-        ).date()
-    
         # Excelから対象児のおもちゃ別データを取得
     target_df = df[
         (df["子どもID"] == "C001") &
@@ -368,13 +352,8 @@ def development_page():
     elif display_mode == "時系列":
         records = [
             r for r in records
-            if (
-                date.fromisoformat(r["date"]) == today
-                or (
-                    date.fromisoformat(r["date"]).year == past_date.year
-                    and date.fromisoformat(r["date"]).month == past_date.month
-                )
-            )
+            if date.fromisoformat(r["date"])
+            in [today, one_week_ago]
         ]
 
     elif display_mode == "同月齢":
@@ -476,8 +455,12 @@ def development_page():
 
                 if record_date == today:
                     point_colors.append("#E68AA3")
-                else:
+
+                elif record_date == one_week_ago:
                     point_colors.append("#769BC8")
+
+                else:
+                    point_colors.append("#AAAAAA")
 
             else:
                 point_colors.append("#E68AA3")
@@ -559,30 +542,6 @@ def development_page():
             )
         )
 
-    # スマホでも拡大・縮小ボタンを横一列にする
-    st.markdown(
-        """
-        <style>
-        .st-key-zoom_controls div[data-testid="stHorizontalBlock"] {
-            flex-wrap: nowrap !important;
-        }
-
-        .st-key-zoom_controls div[data-testid="stColumn"] {
-            min-width: 0 !important;
-            flex: 1 1 0 !important;
-        }
-
-        .st-key-zoom_controls button {
-            width: 100% !important;
-            white-space: nowrap !important;
-            font-size: 12px !important;
-            padding: 0.4rem 0.1rem !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-    
     # 拡大・縮小の倍率を保存
     if "circle_zoom" not in st.session_state:
         st.session_state.circle_zoom = 1.0
@@ -694,7 +653,11 @@ def development_page():
                 move_page("記録詳細")
                 st.rerun()
 
+
+       # 画面下の説明
+    # -------------------------
     # 画面下の説明
+    # -------------------------
     if display_mode == "現在":
         st.info(
             f"今日（{today:%Y/%m/%d}）の遊びの発達状況を表示しています。"
@@ -703,20 +666,20 @@ def development_page():
     elif display_mode == "時系列":
         st.markdown(
             f"<span style='color:#769BC8; font-size:18px;'>●</span> "
-            f"**{months_ago}か月前（{past_date:%Y/%m}）**　"
+            f"**1週間前（{one_week_ago:%m/%d}）**　"
             f"<span style='color:#E68AA3; font-size:18px;'>●</span> "
             f"**今日（{today:%m/%d}）**",
             unsafe_allow_html=True
         )
 
         st.info(
-            "今日と選択した過去の月に見られた遊びの動作を、"
+            "今日と1週間前に見られた遊びの動作を、"
             "点の色で区別して表示しています。"
         )
 
+       
     else:
         st.markdown("#### 同月齢児の発達段階の傾向")
-        
         # 点の色の説明
         st.markdown(
             "<span style='color:#E68AA3; font-size:18px;'>●</span> "
