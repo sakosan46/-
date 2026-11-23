@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import pandas as pd
 import plotly.graph_objects as go
@@ -213,14 +212,13 @@ def make_figure(source, toy, timeseries=False, height=650):
         ))
 
     # 月齢軸
-    if timeseries:
-        # 比較児に30か月を超える子がいても表示できる範囲
-        max_age = max(30, int(source["月齢"].max()))
+     if timeseries:
         age_axis = dict(
             title="月齢",
-            range=[20, max_age + 1],
+            range=[20, 31],
             tickmode="array",
-            tickvals=list(range(21, max_age + 2, 3))
+            tickvals=[21, 24, 27, 30],
+            ticktext=["21", "24", "27", "30"]
         )
     else:
         max_age = max(30, int(source["月齢"].max()))
@@ -255,14 +253,10 @@ def make_figure(source, toy, timeseries=False, height=650):
 
     return fig
 
-
 # 画面
-toy = st.selectbox("おもちゃを選択", list(STAGE_MAX))
-
-mode = st.radio(
-    "表示",
-    ["現在・同月齢", "時系列"],
-    horizontal=True
+toy = st.selectbox(
+    "おもちゃを選択",
+    list(STAGE_MAX)
 )
 
 config = {
@@ -270,42 +264,24 @@ config = {
     "scrollZoom": False
 }
 
-if mode == "現在・同月齢":
+# 4時点の観測データを取得
+plot_data = get_timeseries_data(toy)
 
-    day_data = get_day_data(toy, TODAY)
+st.subheader("遊びの発達状況（21～30か月）")
 
-    st.subheader(f"現在・同月齢（{TODAY:%Y/%m/%d}）")
-
-    if day_data.empty:
-        st.info("表示できる観測データがありません。")
-    else:
-        st.plotly_chart(
-            make_figure(
-                day_data, toy,
-                timeseries=False,
-                height=650
-            ),
-            use_container_width=True,
-            config=config
-        )
-
+if plot_data.empty:
+    st.info("表示できる観測データがありません。")
 else:
-    time_data = get_timeseries_data(toy)
-
-    st.subheader("時系列（21～30か月）")
-
-    if time_data.empty:
-        st.info("表示できる観測データがありません。")
-    else:
-        st.plotly_chart(
-            make_figure(
-                time_data, toy,
-                timeseries=True,
-                height=650
-            ),
-            use_container_width=True,
-            config=config
-        )
+    st.plotly_chart(
+        make_figure(
+            plot_data,
+            toy,
+            timeseries=True,
+            height=650
+        ),
+        use_container_width=True,
+        config=config
+    )
 
 st.caption(
     "赤：対象児／その他：発達段階ごとの色分け（半透明）。"
@@ -318,6 +294,6 @@ st.caption(
 )
 
 st.caption(
-    "時系列は2025/12/23・2026/03/23・"
-    "2026/06/23・2026/09/23の4時点です。"
+    "観測日：2025/12/23・2026/03/23・"
+    "2026/06/23・2026/09/23"
 )
