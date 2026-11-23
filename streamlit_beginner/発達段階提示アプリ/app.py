@@ -497,15 +497,33 @@ def development_page():
     if "circle_zoom" not in st.session_state:
         st.session_state.circle_zoom = 1.0
 
+    # スマホでの列の縦積みを防ぎ、拡大・縮小・元に戻すを横一列にする
+    st.markdown("""
+        <style>
+        @media (max-width: 640px) {
+            .st-key-zoom_controls [data-testid="stHorizontalBlock"] {
+                flex-wrap: nowrap !important;
+                gap: 0.35rem !important;
+            }
+            .st-key-zoom_controls [data-testid="stColumn"] {
+                flex: 1 1 0% !important;
+                width: 0 !important;
+                min-width: 0 !important;
+            }
+            .st-key-zoom_controls [data-testid="stButton"] button {
+                width: 100% !important;
+                padding-left: 0.2rem !important;
+                padding-right: 0.2rem !important;
+                white-space: nowrap !important;
+                font-size: 0.82rem !important;
+            }
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     # ボタンをまとめる
     with st.container(key="zoom_controls"):
-
-        # stack_on_mobile=False でスマホでも横3列を維持
-        col1, col2, col3 = st.columns(
-            3,
-            gap="small",
-            stack_on_mobile=False
-        )
+        col1, col2, col3 = st.columns(3, gap="small")
 
         with col1:
             if st.button("＋ 拡大", key="zoom_in", use_container_width=True):
