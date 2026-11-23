@@ -6,6 +6,20 @@ import math
 import random
 from datetime import date, timedelta
 
+TARGET_ID = 16
+TODAY = date(2026, 9, 23)
+EXCEL_PATH = Path(__file__).resolve().parent / "デモデータ.xlsx"
+
+@st.cache_data
+def load_demo_data(path, mtime):
+    return (pd.read_excel(path, sheet_name="観測データ"),
+            pd.read_excel(path, sheet_name="子ども基本情報"))
+
+def calculate_months(birth, reference):
+    return ((reference.year - birth.year) * 12 + reference.month - birth.month
+            - (reference.day < birth.day))
+
+
 # -------------------------
 # ページの基本設定
 # -------------------------
@@ -41,7 +55,7 @@ def home_page():
 
     with col2:
         st.subheader("ゆいちゃん")
-        st.write("2歳3か月")
+        st.write("3歳6か月")
 
     st.divider()
 
@@ -137,29 +151,29 @@ def show_photo(filename, caption=""):
 # 発達状況画面
 # -------------------------
 def development_page():
-    today = date(2026, 9, 23)
+    today = TODAY
     one_week_ago = today - timedelta(days=7)
-
-    # Excelから観測データを読み込む
-    df = pd.read_excel(
-        Path(__file__).resolve().parent / "デモデータ.xlsx",
-        sheet_name="観測データ"
-    )
-
-    # Excelから子どもの基本情報を読み込む
-    children_df = pd.read_excel(
-        Path(__file__).resolve().parent / "デモデータ.xlsx",
-        sheet_name="子ども基本情報"
-    )
-
-    # 誕生年月を日付形式に変換
-    children_df["誕生年月"] = pd.to_datetime(
-        children_df["誕生年月"]
-    )
-
-    # 日付を扱いやすい形式に変換
-    df["観測日"] = pd.to_datetime(df["観測日"])
-
+    if not EXCEL_PATH.exists():
+        st.error("同じフォルダに『デモデータ.xlsx』を置いてください。")
+        return
+    try:
+        df, children_df = load_demo_data(str(EXCEL_PATH), EXCEL_PATH.stat().st_mtime)
+    except Exception as exc:
+        st.error(f"Excelの読み込みに失敗しました：{exc}")
+        return
+    required_obs = {"識別番号", "観測日", "おもちゃの種類", "遊び方・動作", "発達段階", "観測回数"}
+    required_child = {"識別番号", "誕生年月"}
+    if not required_obs.issubset(df.columns) or not required_child.issubset(children_df.columns):
+        st.error("Excelの『観測データ』『子ども基本情報』の列名を確認してください。")
+        return
+    df["識別番号"] = pd.to_numeric(df["識別番号"], errors="coerce")
+    children_df["識別番号"] = pd.to_numeric(children_df["識別番号"], errors="coerce")
+    df["観測日"] = pd.to_datetime(df["観測日"], errors="coerce")
+    children_df["誕生年月"] = pd.to_datetime(children_df["誕生年月"], errors="coerce")
+    df["発達段階"] = pd.to_numeric(df["発達段階"], errors="coerce")
+    df["観測回数"] = pd.to_numeric(df["観測回数"], errors="coerce").fillna(0)
+    df = df.dropna(subset=["識別番号", "観測日", "発達段階"]).copy()
+    children_df = children_df.dropna(subset=["識別番号", "誕生年月"]).drop_duplicates("識別番号")
 
     if st.button("← ホームに戻る", key="back_dev"):
         move_page("ホーム")
@@ -194,7 +208,7 @@ def development_page():
 
         # Excelから対象児のおもちゃ別データを取得
     target_df = df[
-        (df["子どもID"] == "C001") &
+        (df["識別番号"] == TARGET_ID) &
         (df["おもちゃの種類"] == toy)
     ].copy()
 
@@ -204,6 +218,7 @@ def development_page():
     for i, (_, row) in enumerate(target_df.iterrows()):
         records.append({
             "id": i + 1,
+            "child_id": TARGET_ID,
             "stage": int(row["発達段階"]),
             "date": row["観測日"].strftime("%Y-%m-%d"),
             "comment": str(row["遊び方・動作"]),
@@ -211,131 +226,58 @@ def development_page():
         })
 
     
-    # -------------------------
-    # Excelから同月齢の子どもを抽出
-    # -------------------------
-
-    
-    # -------------------------
-    # 同月齢児の発達段階を自動集計
-    # -------------------------
-
-    # 対象児の生年月日を取得
-    target_birth = children_df.loc[
-        children_df["子どもID"] == "C001",
-        "誕生年月"
-    ].iloc[0]
-
-    # 生年月日と観測日から満月齢を計算
-    def calculate_months(birth, reference):
-        return (
-            (reference.year - birth.year) * 12
-            + reference.month - birth.month
-            - (reference.day < birth.day)
-        )
-
-    # 対象児の現在月齢
-    target_age = calculate_months(target_birth, today)
-
-    # 比較児の生年月日を取得
-    comparison_births = children_df.set_index(
-        "子どもID"
-    )["誕生年月"]
-
-    # 対象児以外の観測履歴を取得
-    peer_df = df[
-        (df["子どもID"] != "C001") &
-        (df["おもちゃの種類"] == toy) &
-        (df["観測日"].dt.date <= today)
-    ].copy()
-
-    # 各観測記録に生年月日を追加
-    peer_df["誕生年月"] = peer_df[
-        "子どもID"
-    ].map(comparison_births)
-
-    # 観測した時点の満月齢を計算
-    peer_df["観測時月齢"] = peer_df.apply(
-        lambda r: calculate_months(
-            r["誕生年月"],
-            r["観測日"]
-        ),
-        axis=1
+    # 基準日時点で対象児と同じ月齢に到達している比較児を抽出。
+    # 比較児の観測日は各自が42か月だった過去の日付でもよい。
+    target_births = children_df.loc[children_df["識別番号"] == TARGET_ID, "誕生年月"]
+    if target_births.empty:
+        st.error("子ども基本情報に対象児（識別番号16）がありません。")
+        return
+    target_age = calculate_months(target_births.iloc[0], today)
+    children_df = children_df.copy()
+    children_df["現在月齢"] = children_df["誕生年月"].apply(
+        lambda birth: calculate_months(birth, today)
     )
-
-    # 対象児と同じ満月齢の記録を抽出
-    same_age_df = peer_df[
-        peer_df["観測時月齢"] == target_age
+    eligible_peer_ids = set(children_df.loc[
+        (children_df["識別番号"] != TARGET_ID)
+        & (children_df["現在月齢"] >= target_age), "識別番号"
+    ])
+    comparison_births = children_df.set_index("識別番号")["誕生年月"]
+    peer_df = df.loc[
+        df["識別番号"].isin(eligible_peer_ids)
+        & (df["おもちゃの種類"] == toy)
+        & (df["観測日"].dt.date <= today)
+        & (df["観測回数"] > 0)
+        & df["発達段階"].between(1, count)
     ].copy()
-
-    # Excelの行順を保存
+    peer_df["誕生年月"] = peer_df["識別番号"].map(comparison_births)
+    peer_df = peer_df.dropna(subset=["誕生年月"])
+    peer_df["観測時月齢"] = peer_df.apply(
+        lambda r: calculate_months(r["誕生年月"], r["観測日"]), axis=1
+    )
+    same_age_df = peer_df.loc[peer_df["観測時月齢"] == target_age].copy()
     same_age_df["元の行順"] = same_age_df.index
-
-    # 各児の最新の観測記録を1件選択
-    # 同日の場合は観測回数が多い記録を優先
+    # 比較児1人につき1件。最新日→観測回数の多い記録を優先。
     selected_df = (
         same_age_df.sort_values(
-            ["子どもID", "観測日", "観測回数", "元の行順"],
+            ["識別番号", "観測日", "観測回数", "元の行順"],
             ascending=[True, False, False, True]
-        )
-        .drop_duplicates(
-            subset=["子どもID"],
-            keep="first"
-        )
-        .copy()
+        ).drop_duplicates("識別番号", keep="first")
     )
-
-    # 発達段階ごとの人数を集計
-    stage_counts = (
-        selected_df["発達段階"]
-        .astype(int)
-        .value_counts()
-        .sort_index()
+    stage_counts = selected_df["発達段階"].astype(int).value_counts()
+    most_common_stages = (
+        stage_counts.index[stage_counts == stage_counts.max()].tolist()
+        if not stage_counts.empty else []
     )
-
-    # 比較対象の人数
-    comparison_count = len(selected_df)
-
-    # 最も人数が多い段階を取得
-    most_common_stages = []
-
-    if not stage_counts.empty:
-        highest = stage_counts.max()
-
-        most_common_stages = [
-            int(stage)
-            for stage, number in stage_counts.items()
-            if number == highest
-        ]
-
-    # 同心円グラフに表示するデータを作成
     same_age_records = []
-
     for i, (_, row) in enumerate(selected_df.iterrows()):
         same_age_records.append({
             "id": 100000 + i,
-            "child_id": row["子どもID"],
+            "child_id": int(row["識別番号"]),
             "stage": int(row["発達段階"]),
             "date": row["観測日"].strftime("%Y-%m-%d"),
             "comment": str(row["遊び方・動作"]),
             "count": int(row["観測回数"])
         })
-
-    # 円の点として使える形式に変換
-    same_age_records = []
-
-    for i, (_, row) in enumerate(same_age_df.iterrows()):
-
-        same_age_records.append({
-            "id": 100000 + i,
-            "child_id": row["子どもID"],
-            "stage": int(row["発達段階"]),
-            "date": row["観測日"].strftime("%Y-%m-%d"),
-            "comment": str(row["遊び方・動作"]),
-            "count": int(row["観測回数"])
-        })
-
-  
 
        # おもちゃに合わせて段階数を調整
     records = [
@@ -362,10 +304,7 @@ def development_page():
             if date.fromisoformat(r["date"]) == today
         ]
 
-        same_age_records = [
-            r for r in same_age_records
-            if date.fromisoformat(r["date"]) == today
-        ]
+        # 比較児は42か月時点の最新記録を表示するため、今日の日付で絞らない。
     fig = go.Figure()
 
     # 円の層を外側から描く
@@ -497,17 +436,17 @@ def development_page():
 
             stage = record["stage"]
 
-            random.seed(100000 + i)
+            rng = random.Random(100000 + i)
 
             inner_radius = stage - 1
             outer_radius = stage
 
-            radius = random.uniform(
+            radius = rng.uniform(
                 inner_radius + 0.15,
                 outer_radius - 0.15
             )
 
-            angle = random.uniform(0, 2 * math.pi)
+            angle = rng.uniform(0, 2 * math.pi)
 
             x = radius * math.cos(angle)
             y = radius * math.sin(angle)
@@ -520,7 +459,7 @@ def development_page():
                 f"段階{stage}<br>"
                 f"日付：{record['date']}<br>"
                 f"遊び方：{record['comment']}<br>"
-                f"観測回数：{count_points}回"
+                f"観測回数：{record['count']}回"
             )
 
             same_age_ids.append(record["id"])
@@ -690,7 +629,8 @@ def development_page():
         )
 
         st.info(
-            "同月齢の子どもたちにも、さまざまな遊び方がみられます。発達の進み方には個人差があります。"
+            f"比較児{len(selected_df)}人の{target_age}か月時点の記録を表示しています。"
+            "発達の進み方には個人差があります。"
         )
 
 # -------------------------
@@ -711,7 +651,7 @@ def record_detail_page():
         return
 
     toy = st.session_state.get("selected_toy", "")
-    child_id = record.get("child_id", "C001")
+    child_id = record.get("child_id", TARGET_ID)
 
     # 観測記録を区別するためのキー
     record_key = (
@@ -870,7 +810,7 @@ def interest_page():
 
         # Excelの観測データを読み込む
         df = pd.read_excel(
-            "デモデータ.xlsx",
+            EXCEL_PATH,
             sheet_name="観測データ"
         )
 
@@ -878,7 +818,7 @@ def interest_page():
 
         # 対象児のデータ
         target_df = df[
-            df["子どもID"] == "C001"
+            df["識別番号"] == TARGET_ID
         ].copy()
 
         # デモデータの基準日
@@ -945,7 +885,7 @@ def interest_page():
         # Excelのデータを読み込む
         # -------------------------
         df = pd.read_excel(
-            "デモデータ.xlsx",
+            EXCEL_PATH,
             sheet_name="観測データ"
         )
 
@@ -954,7 +894,7 @@ def interest_page():
 
         # 対象児のデータだけを取り出す
         target_df = df[
-            df["子どもID"] == "C001"
+            df["識別番号"] == TARGET_ID
         ].copy()
 
         # -------------------------
