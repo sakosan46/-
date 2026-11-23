@@ -9,7 +9,6 @@ st.title("遊びの発達状況（3D散布図）")
 
 EXCEL_PATH = Path(__file__).resolve().parent / "デモデータ.xlsx"
 TODAY = pd.Timestamp("2026-09-23")
-WEEK_AGO = TODAY - pd.Timedelta(days=7)
 TARGET_ID = "C001"
 MIN_AGE = 42
 AGE_POINTS = [33, 36, 39, 42]
@@ -67,37 +66,15 @@ df["月齢"] = calculate_age(df["観測日"], df["誕生年月"])
 df["識別番号"] = df["子どもID"].map(id_map)
 
 
-def get_peer_history(toy):
-    """比較児の33・36・39・42か月時点の記録。各月齢で最新観測日を使用。"""
+def get_history(toy):
+    """対象児と比較児の33・36・39・42か月時点の記録を取得する。
+
+    各児・各月齢について最新の観測日の記録を採用し、
+    同日に複数の発達段階があればすべて残す。
+    """
+    ids = eligible_peer_ids | {TARGET_ID}
     result = df.loc[
-        df["子どもID"].isin(eligible_peer_ids)
-        & (df["おもちゃの種類"] == toy)
-        & df["月齢"].isin(AGE_POINTS)
-        & (df["観測日"] <= TODAY)
-        & df["発達段階"].between(1, STAGE_MAX[toy])
-        & (df["観測回数"] > 0)
-    ].copy()
-    if result.empty:
-        return result
-    latest = result.groupby(["子どもID", "月齢"])["観測日"].transform("max")
-    return result.loc[result["観測日"] == latest].copy()
-
-
-def get_target_snapshot(toy, day):
-    """対象児の指定日だけの記録。"""
-    return df.loc[
-        (df["子どもID"] == TARGET_ID)
-        & (df["おもちゃの種類"] == toy)
-        & (df["観測日"] == day)
-        & df["発達段階"].between(1, STAGE_MAX[toy])
-        & (df["観測回数"] > 0)
-    ].copy()
-
-
-def get_target_history(toy):
-    """対象児の33・36・39・42か月時点の履歴。"""
-    result = df.loc[
-        (df["子どもID"] == TARGET_ID)
+        df["子どもID"].isin(ids)
         & (df["おもちゃの種類"] == toy)
         & df["月齢"].isin(AGE_POINTS)
         & (df["観測日"] <= TODAY)
@@ -126,80 +103,64 @@ def spread_points(source):
     return expanded
 
 
-def make_figure(source, toy, height=620):
+def make_figure(source, toy, height=700):
+    """1枚の3D散布図に両者の4つの月齢の履歴を表示する。"""
     fig = go.Figure()
     expanded = spread_points(source)
     peers = expanded.loc[expanded["子どもID"] != TARGET_ID]
     target = expanded.loc[expanded["子どもID"] == TARGET_ID]
 
+    # 比較児は月齢別の履歴を発達段階ごとに半透明で表示
     for stage in range(1, STAGE_MAX[toy] + 1):
         part = peers.loc[peers["発達段階"] == stage]
         if not part.empty:
             fig.add_trace(go.Scatter3d(
                 x=part["表示月齢"], y=part["表示識別番号"], z=part["表示発達段階"],
-                mode="markers", name="比較児", showlegend=False,
-                marker=dict(size=4, color=STAGE_COLORS[stage], opacity=0.35),
-                hoverinfo="skip"
+                mode="markers", name=f"比較児・段階{stage}",
+                marker=dict(size=4, color=STAGE_COLORS[stage], opacity=0.25),
+                hovertemplate="比較児<br>月齢：%{x:.0f}<br>段階：%{z:.0f}<extra></extra>"
             ))
+
+    # 対象児の4つの月齢の履歴はすべて赤色で表示
     if not target.empty:
         fig.add_trace(go.Scatter3d(
-            x=target["表示月齢"], y=target["表示識別番号"], z=target["表示発達段階"],
-            mode="markers", name="対象児", showlegend=False,
-            marker=dict(size=7, color="red", opacity=1), hoverinfo="skip"
+            x=target["表示月齢"], y=target["表示識別番号"],
+            z=target["表示発達段階"], mode="markers",
+            name="対象児", marker=dict(size=7, color="red", opacity=1),
+            hovertemplate="対象児<br>月齢：%{x:.0f}<br>段階：%{z:.0f}<extra></extra>"
         ))
 
     fig.update_layout(
         scene=dict(
-            xaxis=dict(title="月齢", range=[32, 43], tickmode="array", tickvals=AGE_POINTS),
+            xaxis=dict(title="月齢", range=[32, 43], tickmode="array",
+                       tickvals=AGE_POINTS),
             yaxis=dict(title="識別番号", range=[0.5, len(child_ids) + 0.5], dtick=1),
             zaxis=dict(title="発達段階", range=[0.5, STAGE_MAX[toy] + 0.5],
                        tickmode="array", tickvals=list(range(1, STAGE_MAX[toy] + 1))),
-            aspectmode="cube", camera=CAMERA
+            aspectmode="cube", camera=CAMERA,
         ),
-        height=height, margin=dict(l=0, r=0, t=0, b=0), showlegend=False
+        height=height, margin=dict(l=0, r=0, t=0, b=0),
+        showlegend=True,
+        legend=dict(orientation="h", y=-0.06, x=0),
     )
     return fig
 
 
-def show_chart(source, toy, key):
-    if source.empty:
-        st.info("表示できる観測データがありません。")
-    else:
-        st.plotly_chart(make_figure(source, toy), use_container_width=True,
-                        key=key, config={"displayModeBar": False, "scrollZoom": False})
-
-
 toy = st.selectbox("おもちゃを選択", list(STAGE_MAX.keys()), index=1)
-view = st.radio("表示する情報", ["現在・同月齢", "時系列", "月齢別の履歴"], horizontal=True)
-peer_history = get_peer_history(toy)
+st.subheader("対象児と比較児の発達状況（33・36・39・42か月）")
 
-if view == "現在・同月齢":
-    st.subheader("現在の発達状況と同月齢児の比較")
-    current = get_target_snapshot(toy, TODAY)
-    plot_data = pd.concat([peer_history, current], ignore_index=True)
-    show_chart(plot_data, toy, "current_scatter")
-    st.caption("赤：対象児の2026年9月23日の記録。半透明：比較児の33・36・39・42か月時点の履歴。")
-    st.caption("同月齢の比較は、各比較児の42か月時点の点を見て判断します。")
+# 対象児と比較児の同じ4つの月齢の記録を、1枚の散布図に表示する。
+plot_data = get_history(toy)
 
-elif view == "時系列":
-    st.subheader("1週間前と今日の比較")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("**1週間前（2026年9月16日）**")
-        old_data = pd.concat([peer_history, get_target_snapshot(toy, WEEK_AGO)], ignore_index=True)
-        show_chart(old_data, toy, "week_scatter")
-    with col2:
-        st.markdown("**今日（2026年9月23日）**")
-        new_data = pd.concat([peer_history, get_target_snapshot(toy, TODAY)], ignore_index=True)
-        show_chart(new_data, toy, "today_scatter")
-    st.caption("両図とも比較児の背景データは共通で、赤い対象児の点だけが各日付の記録に切り替わります。")
-
+if plot_data.empty:
+    st.info("表示できる観測データがありません。")
 else:
-    st.subheader("33・36・39・42か月の観測履歴")
-    history = pd.concat([peer_history, get_target_history(toy)], ignore_index=True)
-    show_chart(history, toy, "history_scatter")
-    st.caption("各児・各月齢の最新観測日の記録を表示しています。")
+    st.plotly_chart(
+        make_figure(plot_data, toy), use_container_width=True,
+        config={"displayModeBar": False, "scrollZoom": False},
+    )
 
-st.caption("赤：対象児／その他：発達段階ごとの色分け（半透明）。ドラッグで3D回転できます。")
-st.caption(f"比較候補児29人のうち、2026年9月23日時点で42か月以上の{len(eligible_peer_ids)}人を使用。")
-st.caption("点はExcelの『観測回数』分表示しています。『使用回数』列は使用していません。")
+st.caption("赤：対象児／半透明：比較児（発達段階別の色）。")
+st.caption("33・36・39・42か月時点の観測記録を、各児・各月齢の最新観測日から表示しています。")
+st.caption(f"比較候補児29人のうち、基準日時点で42か月以上の{len(eligible_peer_ids)}人を使用しています。")
+st.caption("各記録の点数はExcelの『観測回数』に対応します。ドラッグで3D回転できます。")
