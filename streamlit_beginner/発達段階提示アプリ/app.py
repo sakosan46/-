@@ -542,6 +542,30 @@ def development_page():
             )
         )
 
+    # スマホでも拡大・縮小ボタンを横一列にする
+    st.markdown(
+        """
+        <style>
+        .st-key-zoom_controls div[data-testid="stHorizontalBlock"] {
+            flex-wrap: nowrap !important;
+        }
+
+        .st-key-zoom_controls div[data-testid="stColumn"] {
+            min-width: 0 !important;
+            flex: 1 1 0 !important;
+        }
+
+        .st-key-zoom_controls button {
+            width: 100% !important;
+            white-space: nowrap !important;
+            font-size: 12px !important;
+            padding: 0.4rem 0.1rem !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    
     # 拡大・縮小の倍率を保存
     if "circle_zoom" not in st.session_state:
         st.session_state.circle_zoom = 1.0
