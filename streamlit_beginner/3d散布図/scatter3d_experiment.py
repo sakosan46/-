@@ -212,7 +212,7 @@ def make_figure(source, toy, timeseries=False, height=650):
         ))
 
     # 月齢軸
-     if timeseries:
+    if timeseries:
         age_axis = dict(
             title="月齢",
             range=[20, 31],
