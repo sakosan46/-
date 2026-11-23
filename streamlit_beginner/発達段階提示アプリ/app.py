@@ -414,32 +414,31 @@ def development_page():
         # 観測回数だけ点を作る
         for j in range(count_points):
 
-            # 同じ段階の点が重ならないように配置
+            # 同じ段階の点の配置数を管理
             position = stage_positions.get(stage, 0)
             stage_positions[stage] = position + 1
 
-            
-         # 発達段階の範囲内で点をばらけさせる
-        random.seed(stage * 1000 + position)
+            # 発達段階の範囲内で点をばらけさせる
+            rng = random.Random(stage * 1000 + position)
 
-        inner_radius = stage - 1
-        outer_radius = stage
+            inner_radius = stage - 1
+            outer_radius = stage
 
-        radius = random.uniform(
-            inner_radius + 0.15,
-            outer_radius - 0.15
-        )
+            radius = rng.uniform(
+                inner_radius + 0.15,
+                outer_radius - 0.15
+            )
 
-        angle = random.uniform(0, 2 * math.pi)
+            angle = rng.uniform(0, 2 * math.pi)
 
-        x = radius * math.cos(angle)
-        y = radius * math.sin(angle)
+            x = radius * math.cos(angle)
+            y = radius * math.sin(angle)
 
-        x_values.append(x)
-        y_values.append(y)
+            x_values.append(x)
+            y_values.append(y)
 
-        # 点を選択したときの情報
-        hover_text.append(
+            # 点を選択したときの情報
+            hover_text.append(
                 f"段階{stage}<br>"
                 f"日付：{record['date']}<br>"
                 f"遊び方：{record['comment']}<br>"
@@ -447,24 +446,24 @@ def development_page():
             )
 
             # 同じ記録から作った点には同じIDを付ける
-        custom_ids.append(record["id"])
+            custom_ids.append(record["id"])
 
-        # 点の色分け
-        if display_mode == "時系列":
+            # 点の色分け
+            if display_mode == "時系列":
 
-         record_date = date.fromisoformat(record["date"])
+                record_date = date.fromisoformat(record["date"])
 
-        if record_date == today:
-        　point_colors.append("#E68AA3")
+                if record_date == today:
+                    point_colors.append("#E68AA3")
 
-            elif record_date == one_week_ago:
-            　 point_colors.append("#769BC8")
-    
+                elif record_date == one_week_ago:
+                    point_colors.append("#769BC8")
+
+                else:
+                    point_colors.append("#AAAAAA")
+
             else:
-             　point_colors.append("#AAAAAA")
-    
-            else:
-            　　point_colors.append("#E68AA3")
+                point_colors.append("#E68AA3")
 
     # -------------------------
     # 円の中に点を描画
@@ -1601,3 +1600,4 @@ with col3:
     if st.button("⚙️ 設定"):
         move_page("設定")
         st.rerun()
+
