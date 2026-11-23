@@ -435,8 +435,8 @@ def development_page():
         x = radius * math.cos(angle)
         y = radius * math.sin(angle)
 
-            x_values.append(x)
-            y_values.append(y)
+        x_values.append(x)
+        y_values.append(y)
 
             # 点を選択したときの情報
             hover_text.append(
