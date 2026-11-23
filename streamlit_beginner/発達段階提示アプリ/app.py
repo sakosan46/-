@@ -588,14 +588,8 @@ def development_page():
         ),
         dragmode=False
     )
-    fig.update_xaxes(
-        fixedrange=False
-    )
-    fig.update_yaxes(
-        fixedrange=False
-    )
-    
-        # スマホでグラフを指で動かせないようにする
+
+        # スマホでのタッチ操作を制限
     st.markdown(
         """
         <style>
@@ -607,7 +601,7 @@ def development_page():
         unsafe_allow_html=True
     )
     
-    # 円の表示と点の選択
+       # 円の表示と点の選択
     event = st.plotly_chart(
         fig,
         use_container_width=True,
