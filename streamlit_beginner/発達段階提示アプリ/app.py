@@ -594,7 +594,19 @@ def development_page():
     fig.update_yaxes(
         fixedrange=False
     )
-
+    
+        # スマホでグラフを指で動かせないようにする
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stPlotlyChart"] .js-plotly-plot {
+            touch-action: none !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    
     # 円の表示と点の選択
     event = st.plotly_chart(
         fig,
@@ -606,7 +618,10 @@ def development_page():
             "scrollZoom": False,
             "displayModeBar": False,
             "doubleClick": False,
-            "staticPlot": False
+            "staticPlot": False,
+            "showAxisDragHandles": False,
+            "showAxisRangeEntryBoxes": False,
+            "editable": False
         }
     )
     st.caption(
