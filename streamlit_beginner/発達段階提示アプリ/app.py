@@ -542,7 +542,7 @@ def development_page():
             )
         )
 
-        # グラフのデザイン
+      # グラフのデザイン
     fig.update_layout(
         height=430,
         margin=dict(l=10, r=10, t=10, b=10),
@@ -559,10 +559,10 @@ def development_page():
             scaleanchor="x",
             scaleratio=1
         ),
-        dragmode="zoom"
+        dragmode=False
     )
 
-           # 円の表示と点の選択
+      # 円の表示と点の選択
     event = st.plotly_chart(
         fig,
         use_container_width=True,
@@ -570,10 +570,17 @@ def development_page():
         selection_mode="points",
         key="development_chart",
         config={
-            "scrollZoom": True,
+            "scrollZoom": False,
             "displayModeBar": True,
             "displaylogo": False,
-            "doubleClick": "reset",
+            "modeBarButtonsToRemove": [
+                "pan2d",
+                "select2d",
+                "lasso2d",
+                "zoom2d",
+                "autoScale2d"
+            ],
+            "doubleClick": False,
             "staticPlot": False
         }
     )
