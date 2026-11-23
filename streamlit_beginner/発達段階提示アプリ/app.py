@@ -545,23 +545,30 @@ def development_page():
     # 拡大・縮小の倍率を保存
     if "circle_zoom" not in st.session_state:
         st.session_state.circle_zoom = 1.0
-        
-        col1, col2, col3 = st.columns([1, 1, 1], gap="small")
-    with col1:
-        if st.button("＋ 拡大"):
-            st.session_state.circle_zoom = min(
-                st.session_state.circle_zoom * 1.25, 3.0
-            )
 
-    with col2:
-        if st.button("－ 縮小"):
-            st.session_state.circle_zoom = max(
-                st.session_state.circle_zoom / 1.25, 0.5
-            )
+    # ボタンをまとめる
+    with st.container(key="zoom_controls"):
 
-    with col3:
-        if st.button("元に戻す"):
-            st.session_state.circle_zoom = 1.0
+        col1, col2, col3 = st.columns(
+            [1, 1, 1],
+            gap="small"
+        )
+
+        with col1:
+            if st.button("＋ 拡大", key="zoom_in"):
+                st.session_state.circle_zoom = min(
+                    st.session_state.circle_zoom * 1.25, 3.0
+                )
+
+        with col2:
+            if st.button("－ 縮小", key="zoom_out"):
+                st.session_state.circle_zoom = max(
+                    st.session_state.circle_zoom / 1.25, 0.5
+                )
+
+        with col3:
+            if st.button("元に戻す", key="zoom_reset"):
+                st.session_state.circle_zoom = 1.0
 
     zoom = st.session_state.circle_zoom
     axis_limit = (count + 0.5) / zoom
