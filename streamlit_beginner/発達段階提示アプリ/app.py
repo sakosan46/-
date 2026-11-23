@@ -438,8 +438,8 @@ def development_page():
         x_values.append(x)
         y_values.append(y)
 
-            # 点を選択したときの情報
-            hover_text.append(
+        # 点を選択したときの情報
+        hover_text.append(
                 f"段階{stage}<br>"
                 f"日付：{record['date']}<br>"
                 f"遊び方：{record['comment']}<br>"
