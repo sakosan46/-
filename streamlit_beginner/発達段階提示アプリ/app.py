@@ -694,15 +694,13 @@ def development_page():
                 move_page("記録詳細")
                 st.rerun()
 
-    # -------------------------
     # 画面下の説明
-    # -------------------------
     if display_mode == "現在":
         st.info(
             f"今日（{today:%Y/%m/%d}）の遊びの発達状況を表示しています。"
         )
 
-       elif display_mode == "時系列":
+    elif display_mode == "時系列":
         st.markdown(
             f"<span style='color:#769BC8; font-size:18px;'>●</span> "
             f"**{months_ago}か月前（{past_date:%Y/%m}）**　"
@@ -715,9 +713,10 @@ def development_page():
             "今日と選択した過去の月に見られた遊びの動作を、"
             "点の色で区別して表示しています。"
         )
-       
+
     else:
         st.markdown("#### 同月齢児の発達段階の傾向")
+        
         # 点の色の説明
         st.markdown(
             "<span style='color:#E68AA3; font-size:18px;'>●</span> "
