@@ -152,7 +152,6 @@ def show_photo(filename, caption=""):
 # -------------------------
 def development_page():
     today = TODAY
-    one_week_ago = today - timedelta(days=7)
     if not EXCEL_PATH.exists():
         st.error("同じフォルダに『デモデータ.xlsx』を置いてください。")
         return
@@ -203,6 +202,19 @@ def development_page():
         ["現在", "時系列", "同月齢"],
         default="現在"
     )
+
+    # 時系列では、1つの選択欄で比較する月を切り替える
+    months_before = 3
+    past_date = None
+    if display_mode == "時系列":
+        selected_period = st.selectbox(
+            "現在と比較する時期",
+            ["3か月前", "6か月前", "9か月前"],
+            index=0,
+            key="history_period",
+        )
+        months_before = {"3か月前": 3, "6か月前": 6, "9か月前": 9}[selected_period]
+        past_date = (pd.Timestamp(today) - pd.DateOffset(months=months_before)).date()
 
     st.subheader(f"{toy}の発達状況")
 
@@ -295,7 +307,7 @@ def development_page():
         records = [
             r for r in records
             if date.fromisoformat(r["date"])
-            in [today, one_week_ago]
+            in [today, past_date]
         ]
 
     elif display_mode == "同月齢":
@@ -395,7 +407,7 @@ def development_page():
                 if record_date == today:
                     point_colors.append("#E68AA3")
 
-                elif record_date == one_week_ago:
+                elif record_date == past_date:
                     point_colors.append("#769BC8")
 
                 else:
@@ -605,14 +617,14 @@ def development_page():
     elif display_mode == "時系列":
         st.markdown(
             f"<span style='color:#769BC8; font-size:18px;'>●</span> "
-            f"**1週間前（{one_week_ago:%m/%d}）**　"
+            f"**{months_before}か月前（{past_date:%Y/%m/%d}）**　"
             f"<span style='color:#E68AA3; font-size:18px;'>●</span> "
             f"**今日（{today:%m/%d}）**",
             unsafe_allow_html=True
         )
 
         st.info(
-            "今日と1週間前に見られた遊びの動作を、"
+            f"今日と{months_before}か月前に見られた遊びの動作を、"
             "点の色で区別して表示しています。"
         )
 
