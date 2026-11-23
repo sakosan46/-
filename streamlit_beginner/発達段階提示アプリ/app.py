@@ -542,9 +542,33 @@ def development_page():
             )
         )
 
-      # グラフのデザイン
+    # 拡大・縮小の倍率を保存
+    if "circle_zoom" not in st.session_state:
+        st.session_state.circle_zoom = 1.0
+
+    col1, col2, col3 = st.columns([1, 1, 1])
+
+    with col1:
+        if st.button("＋ 拡大"):
+            st.session_state.circle_zoom = min(
+                st.session_state.circle_zoom * 1.25, 3.0
+            )
+
+    with col2:
+        if st.button("－ 縮小"):
+            st.session_state.circle_zoom = max(
+                st.session_state.circle_zoom / 1.25, 0.5
+            )
+
+    with col3:
+        if st.button("元に戻す"):
+            st.session_state.circle_zoom = 1.0
+
+    zoom = st.session_state.circle_zoom
+    axis_limit = (count + 0.5) / zoom
+
+    # グラフのデザイン
     fig.update_layout(
-            # 円の移動・タッチ操作を制限
         height=430,
         margin=dict(l=10, r=10, t=10, b=10),
         paper_bgcolor="rgba(0,0,0,0)",
@@ -552,13 +576,15 @@ def development_page():
         showlegend=False,
         xaxis=dict(
             visible=False,
-            range=[-count - 0.5, count + 0.5]
+            range=[-axis_limit, axis_limit],
+            fixedrange=True
         ),
         yaxis=dict(
             visible=False,
-            range=[-count - 0.5, count + 0.5],
+            range=[-axis_limit, axis_limit],
             scaleanchor="x",
-            scaleratio=1
+            scaleratio=1,
+            fixedrange=True
         ),
         dragmode=False
     )
@@ -578,19 +604,9 @@ def development_page():
         key="development_chart",
         config={
             "scrollZoom": False,
-            "displayModeBar": True,
-            "displaylogo": False,
-            "modeBarButtonsToRemove": [
-                "pan2d",
-                "select2d",
-                "lasso2d",
-                "zoom2d",
-                "autoScale2d"
-            ],
+            "displayModeBar": False,
             "doubleClick": False,
-            "staticPlot": False,
-            "showAxisDragHandles": False,
-            "showAxisRangeEntryBoxes": False
+            "staticPlot": False
         }
     )
     st.caption(
@@ -1622,4 +1638,3 @@ with col3:
     if st.button("⚙️ 設定"):
         move_page("設定")
         st.rerun()
-
