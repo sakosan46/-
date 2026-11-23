@@ -447,7 +447,7 @@ def development_page():
             )
 
             # 同じ記録から作った点には同じIDを付ける
-            custom_ids.append(record["id"])
+        custom_ids.append(record["id"])
 
             # 点の色分け
             if display_mode == "時系列":
