@@ -449,22 +449,22 @@ def development_page():
             # 同じ記録から作った点には同じIDを付ける
         custom_ids.append(record["id"])
 
-            # 点の色分け
-            if display_mode == "時系列":
+        # 点の色分け
+        if display_mode == "時系列":
 
-                record_date = date.fromisoformat(record["date"])
+         record_date = date.fromisoformat(record["date"])
 
-                if record_date == today:
-                    point_colors.append("#E68AA3")
+        if record_date == today:
+        　point_colors.append("#E68AA3")
 
-                elif record_date == one_week_ago:
-                    point_colors.append("#769BC8")
-
-                else:
-                    point_colors.append("#AAAAAA")
-
+            elif record_date == one_week_ago:
+            　 point_colors.append("#769BC8")
+    
             else:
-                point_colors.append("#E68AA3")
+             　point_colors.append("#AAAAAA")
+    
+            else:
+            　　point_colors.append("#E68AA3")
 
     # -------------------------
     # 円の中に点を描画
