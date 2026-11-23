@@ -545,12 +545,6 @@ def development_page():
       # グラフのデザイン
     fig.update_layout(
             # 円の移動・タッチ操作を制限
-    fig.update_xaxes(
-        fixedrange=False
-    )
-    fig.update_yaxes(
-        fixedrange=False
-    )
         height=430,
         margin=dict(l=10, r=10, t=10, b=10),
         paper_bgcolor="rgba(0,0,0,0)",
@@ -567,6 +561,12 @@ def development_page():
             scaleratio=1
         ),
         dragmode=False
+    )
+    fig.update_xaxes(
+        fixedrange=False
+    )
+    fig.update_yaxes(
+        fixedrange=False
     )
 
     # 円の表示と点の選択
