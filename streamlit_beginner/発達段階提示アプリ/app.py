@@ -562,7 +562,7 @@ def development_page():
         dragmode="zoom"
     )
 
-        # 円の表示と点の選択
+           # 円の表示と点の選択
     event = st.plotly_chart(
         fig,
         use_container_width=True,
@@ -571,7 +571,8 @@ def development_page():
         key="development_chart",
         config={
             "scrollZoom": True,
-            "displayModeBar": False,
+            "displayModeBar": True,
+            "displaylogo": False,
             "doubleClick": "reset",
             "staticPlot": False
         }
