@@ -425,9 +425,9 @@ def development_page():
             y=y_values,
             mode="markers",
             marker=dict(
-                size=13,
+                size=9,
                 color=point_colors,
-                line=dict(color="white", width=2)
+                line=dict(color="white", width=1)
             ),
             text=hover_text,
             customdata=custom_ids,
@@ -482,7 +482,7 @@ def development_page():
                 y=same_age_y,
                 mode="markers",
                 marker=dict(
-                    size=10,
+                    size=7,
                     color="#A9B0B8",
                     line=dict(color="white", width=1)
                 ),
