@@ -11,7 +11,7 @@ EXCEL_PATH = Path(__file__).resolve().parent / "デモデータ.xlsx"
 TODAY = pd.Timestamp("2026-09-23")
 TARGET_ID = 16
 MIN_AGE = 42
-AGE_POINTS = [33, 36, 39, 42]
+AGE_POINTS = [33, 36, 39, 41, 42]
 STAGE_MAX = {"ボール": 5, "お絵描き": 4, "ぬいぐるみ": 3}
 STAGE_COLORS = {1: "#456CB3", 2: "#43A0A6", 3: "#E1B04D", 4: "#9469C4", 5: "#D784A3"}
 CAMERA = dict(eye=dict(x=1.7, y=-1.7, z=0.9))
@@ -70,21 +70,70 @@ df = df.dropna(subset=["観測日", "誕生年月", "発達段階"]).copy()
 df["月齢"] = calculate_age(df["観測日"], df["誕生年月"])
 
 
-def get_history(toy):
-    """各児・各月齢の最新観測日にある全段階の記録を取得する。"""
-    ids = eligible_peer_ids | {TARGET_ID}
-    result = df.loc[
-        df["識別番号"].isin(ids)
-        & (df["おもちゃの種類"] == toy)
-        & df["月齢"].isin(AGE_POINTS)
+def get_display_data(toy, display_mode, months_before=1):
+
+    # 選択したおもちゃの有効な観測データ
+    valid = df.loc[
+        (df["おもちゃの種類"] == toy)
         & (df["観測日"] <= TODAY)
         & df["発達段階"].between(1, STAGE_MAX[toy])
         & (df["観測回数"] > 0)
     ].copy()
-    if result.empty:
-        return result
-    latest = result.groupby(["識別番号", "月齢"])["観測日"].transform("max")
-    return result.loc[result["観測日"] == latest].copy()
+
+    # 対象児の今日のデータ
+    target_today = valid.loc[
+        (valid["識別番号"] == TARGET_ID)
+        & (valid["観測日"].dt.normalize() == TODAY)
+    ].copy()
+
+    # 現在
+    if display_mode == "現在":
+        return target_today
+
+    # 時系列
+    elif display_mode == "時系列":
+
+        past_date = TODAY - pd.DateOffset(
+            months=months_before
+        )
+
+        target_past = valid.loc[
+            (valid["識別番号"] == TARGET_ID)
+            & (valid["観測日"].dt.normalize() == past_date)
+        ].copy()
+
+        return pd.concat(
+            [target_past, target_today],
+            ignore_index=True
+        )
+
+    # 同月齢
+    elif display_mode == "同月齢":
+
+        peers = valid.loc[
+            valid["識別番号"].isin(eligible_peer_ids)
+            & (valid["月齢"] == MIN_AGE)
+        ].copy()
+
+        # 比較児1人につき1件
+        # 最新日、観測回数の多い記録を優先
+        peers["元の行順"] = peers.index
+
+        peers = peers.sort_values(
+            ["識別番号", "観測日", "観測回数", "元の行順"],
+            ascending=[True, False, False, True]
+        ).drop_duplicates(
+            "識別番号",
+            keep="first"
+        )
+
+        # 比較児は1人につき1点
+        peers["観測回数"] = 1
+
+        return pd.concat(
+            [target_today, peers],
+            ignore_index=True
+        )
 
 
 def spread_points(source):
@@ -132,7 +181,14 @@ def make_figure(source, toy, height=700):
     shown_ids = sorted(set(source["識別番号"].astype(int)))
     fig.update_layout(
         scene=dict(
-            xaxis=dict(title="月齢", range=[32, 43], tickmode="array", tickvals=AGE_POINTS),
+           xaxis=dict(
+        title="月齢",
+        range=[32, 43],
+        tickmode="array",
+        tickvals=sorted(
+            source["月齢"].unique().tolist()
+            )
+        ),
             yaxis=dict(title="識別番号", range=[0.5, max(all_ids) + 0.5],
                        tickmode="array", tickvals=shown_ids,
                        ticktext=[str(n) for n in shown_ids]),
@@ -146,17 +202,113 @@ def make_figure(source, toy, height=700):
     return fig
 
 
-toy = st.selectbox("おもちゃを選択", list(STAGE_MAX.keys()), index=1)
-st.subheader("対象児と比較児の発達状況（33・36・39・42か月）")
-plot_data = get_history(toy)
+# -------------------------
+# おもちゃの選択
+# -------------------------
+toy = st.segmented_control(
+    "おもちゃを選択",
+    ["ボール", "お絵描き", "ぬいぐるみ"],
+    default="ボール"
+)
+
+# -------------------------
+# 表示方法の切り替え
+# -------------------------
+display_mode = st.segmented_control(
+    "表示する情報",
+    ["現在", "時系列", "同月齢"],
+    default="現在"
+)
+
+months_before = 1
+
+# -------------------------
+# 時系列の比較時期の選択
+# -------------------------
+if display_mode == "時系列":
+
+    selected_period = st.selectbox(
+        "現在と比較する時期",
+        ["1か月前", "3か月前", "6か月前", "9か月前"],
+        index=0,
+        key="history_period"
+    )
+
+    months_before = {
+        "1か月前": 1,
+        "3か月前": 3,
+        "6か月前": 6,
+        "9か月前": 9
+    }[selected_period]
+
+    past_date = TODAY - pd.DateOffset(
+        months=months_before
+    )
+
+# -------------------------
+# 散布図の表示
+# -------------------------
+st.subheader(f"{toy}の発達状況")
+
+plot_data = get_display_data(
+    toy,
+    display_mode,
+    months_before
+)
 
 if plot_data.empty:
     st.info("表示できる観測データがありません。")
-else:
-    st.plotly_chart(make_figure(plot_data, toy), use_container_width=True,
-                    config={"displayModeBar": False, "scrollZoom": False})
 
-st.caption("赤：対象児／半透明：比較児（発達段階別の色）。")
-st.caption("33・36・39・42か月時点の観測記録を、各児・各月齢の最新観測日から表示しています。")
-st.caption(f"比較候補児29人のうち、基準日時点で42か月以上の{len(eligible_peer_ids)}人を抽出しています。")
-st.caption("各記録の点数はExcelの『観測回数』に対応します。ドラッグで3D回転できます。")
+else:
+    st.plotly_chart(
+        make_figure(plot_data, toy),
+        use_container_width=True,
+        config={
+            "displayModeBar": False,
+            "scrollZoom": False
+        }
+    )
+
+# -------------------------
+# 表示方法ごとの説明
+# -------------------------
+if display_mode == "現在":
+
+    st.caption("赤：対象児")
+
+    st.info(
+        f"今日（{TODAY:%Y/%m/%d}）の"
+        "遊びの発達状況を表示しています。"
+    )
+
+elif display_mode == "時系列":
+
+    st.caption("赤：対象児")
+
+    st.info(
+        f"今日（{TODAY:%Y/%m/%d}）と"
+        f"{months_before}か月前"
+        f"（{past_date:%Y/%m/%d}）の"
+        "遊びの発達状況を表示しています。"
+    )
+
+elif display_mode == "同月齢":
+
+    st.caption(
+        "赤：対象児／半透明：比較児（発達段階別の色）"
+    )
+
+    peer_count = plot_data.loc[
+        plot_data["識別番号"] != TARGET_ID,
+        "識別番号"
+    ].nunique()
+
+    st.info(
+        f"対象児と比較児{peer_count}人の"
+        f"{MIN_AGE}か月時点の記録を表示しています。"
+        "発達の進み方には個人差があります。"
+    )
+
+st.caption(
+    "ドラッグで3D散布図を回転できます。"
+)
