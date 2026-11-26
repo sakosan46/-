@@ -204,16 +204,16 @@ def development_page():
     )
 
     # 時系列では、1つの選択欄で比較する月を切り替える
-    months_before = 3
+    months_before = 4
     past_date = None
     if display_mode == "時系列":
         selected_period = st.selectbox(
             "現在と比較する時期",
-            ["3か月前", "6か月前", "9か月前"],
+            ["1か月前","3か月前", "6か月前", "9か月前"],
             index=0,
             key="history_period",
         )
-        months_before = {"3か月前": 3, "6か月前": 6, "9か月前": 9}[selected_period]
+        months_before = {"1か月前": 1, "3か月前": 3, "6か月前": 6, "9か月前": 9}[selected_period]
         past_date = (pd.Timestamp(today) - pd.DateOffset(months=months_before)).date()
 
     st.subheader(f"{toy}の発達状況")
